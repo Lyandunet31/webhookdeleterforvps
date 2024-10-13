@@ -1,27 +1,37 @@
-
-    # app.py
+# app.py
 from flask import Flask, request, render_template_string
-import requests
+import paramiko
 
 app = Flask(__name__)
 
-@app.route('/webhookspammer', methods=['GET', 'POST'])
-def webhook_deleter():
+@app.route('/control', methods=['GET', 'POST'])
+def control_vps():
     if request.method == 'POST':
-        webhook_url = request.form['webhook_url']
-        data = {
-            "content" : "Webhook spammer powered by ez services",
-            "username" : "Ez services on top"
-            }
-            while True:
-                requests.post(webhook_url,data)
-        if response.status_code == 204:
-            return "Spamming...!"
-        else:
-            return "Failed to spam!"
+        hostname = "82.112.242.179"
+        username = "root"
+        password = request.form['password']
+        command = request.form['command']
+        output = execute_command(hostname, username, password, command)
+        return f"<pre>{output}</pre>"
     return '''
-        <form action="/webhooksender" method="post">
-            <input type="text" name="webhook_url" placeholder="Enter Discord Webhook URL">
-            <button type="submit">Spam webhook</button>
+        <form action="/control" method="post">
+            <input type="password" name="password" placeholder="Enter VPS Password"><br>
+            <input type="text" name="command" placeholder="Enter Command"><br>
+            <button type="submit">Execute Command</button>
         </form>
     '''
+
+def execute_command(hostname, username, password, command):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        client.connect(hostname, username=username, password=password)
+        stdin, stdout, stderr = client.exec_command(command)
+        output = stdout.read().decode() + stderr.read().decode()
+        client.close()
+        return output
+    except Exception as e:
+        return str(e)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
